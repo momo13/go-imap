@@ -19,6 +19,7 @@ func statusItems(options *imap.StatusOptions) []string {
 		"APPENDLIMIT":     options.AppendLimit,
 		"DELETED-STORAGE": options.DeletedStorage,
 		"HIGHESTMODSEQ":   options.HighestModSeq,
+		"X-SIZE":          options.XSize,
 	}
 
 	var l []string
@@ -137,6 +138,10 @@ func readStatusAttVal(dec *imapwire.Decoder, data *imap.StatusData) error {
 		var size int64
 		ok = dec.ExpectNumber64(&size)
 		data.Size = &size
+	case "X-SIZE":
+		var xsize int64
+		ok = dec.ExpectNumber64(&xsize)
+		data.XSize = &xsize
 	case "APPENDLIMIT":
 		var num uint32
 		if dec.Number(&num) {

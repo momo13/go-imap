@@ -9,6 +9,7 @@ type StatusOptions struct {
 	NumUnseen   bool
 	NumDeleted  bool // requires IMAP4rev2 or QUOTA
 	Size        bool // requires IMAP4rev2 or STATUS=SIZE
+	XSize       bool // Dovecots implementation of size before STATUS=SIZE cap was available
 
 	AppendLimit    bool // requires APPENDLIMIT
 	DeletedStorage bool // requires QUOTA=RES-STORAGE
@@ -28,6 +29,7 @@ type StatusData struct {
 	NumUnseen   *uint32
 	NumDeleted  *uint32
 	Size        *int64
+	XSize       *int64
 
 	AppendLimit    *uint32
 	DeletedStorage *int64
