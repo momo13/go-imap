@@ -385,6 +385,15 @@ func (c *Client) Mailbox() *SelectedMailbox {
 	return c.mailbox
 }
 
+// Closed returns a channel that is closed when the connection is closed.
+//
+// This channel cannot be used to reliably determine whether a connection is healthy. If
+// the underlying connection times out, the channel will be closed eventually, but not
+// immediately. To check whether the connection is healthy, send a command (such as Noop).
+func (c *Client) Closed() <-chan struct{} {
+	return c.decCh
+}
+
 // Close immediately closes the connection.
 func (c *Client) Close() error {
 	c.mutex.Lock()
@@ -896,6 +905,10 @@ func (c *Client) readResponseData(typ string) error {
 				}
 			case "NOMODSEQ":
 				// ignore
+			case "NOTIFICATIONOVERFLOW":
+				if handler := c.options.unilateralDataHandler().NotificationOverflow; handler != nil {
+					handler()
+				}
 			default: // [SP 1*<any TEXT-CHAR except "]">]
 				if c.dec.SP() {
 					c.dec.DiscardUntilByte(']')
@@ -1080,7 +1093,7 @@ func (c *Client) Subscribe(mailbox string) *Command {
 	return cmd
 }
 
-// Subscribe sends an UNSUBSCRIBE command.
+// Unsubscribe sends an UNSUBSCRIBE command.
 func (c *Client) Unsubscribe(mailbox string) *Command {
 	cmd := &Command{}
 	enc := c.beginCommand("UNSUBSCRIBE", cmd)
@@ -1179,14 +1192,35 @@ type UnilateralDataMailbox struct {
 //
 // The handler will be invoked in an arbitrary goroutine.
 //
+// These handlers are important when using the IDLE or NOTIFY commands, as the
+// server will send unsolicited STATUS, FETCH, and EXPUNGE responses for
+// mailbox events.
+//
 // See Options.UnilateralDataHandler.
 type UnilateralDataHandler struct {
 	Expunge func(seqNum uint32)
 	Mailbox func(data *UnilateralDataMailbox)
 	Fetch   func(msg *FetchMessageData)
 
-	// requires ENABLE METADATA or ENABLE SERVER-METADATA
+	// Requires ENABLE METADATA or ENABLE SERVER-METADATA.
 	Metadata func(mailbox string, entries []string)
+
+	// Called when the server sends an unsolicited LIST response.
+	//
+	// Used with NOTIFY MailboxName events (RFC 5465) to detect mailbox
+	// creation, deletion, or renaming, and for subscription changes.
+	List func(data *imap.ListData)
+
+	// Called when the server sends an unsolicited STATUS response.
+	//
+	// Commonly used with NOTIFY to receive mailbox status updates
+	// for non-selected mailboxes (RFC 5465).
+	Status func(data *imap.StatusData)
+
+	// Called when the server sends NOTIFICATIONOVERFLOW (RFC 5465).
+	//
+	// Indicates the server has disabled all NOTIFY notifications.
+	NotificationOverflow func()
 }
 
 // command is an interface for IMAP commands.

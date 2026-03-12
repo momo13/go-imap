@@ -120,7 +120,7 @@ func ExampleClient_List_stream() {
 		if mbox == nil {
 			break
 		}
-		log.Printf("Mailbox %q contains %v messages (%v unseen)", mbox.Mailbox, mbox.Status.NumMessages, mbox.Status.NumUnseen)
+		log.Printf("Mailbox %q contains %v messages (%v unseen)", mbox.Mailbox, *mbox.Status.NumMessages, *mbox.Status.NumUnseen)
 	}
 	if err := listCmd.Close(); err != nil {
 		log.Fatalf("LIST command failed: %v", err)
@@ -376,5 +376,36 @@ func ExampleClient_Authenticate_oauth() {
 	})
 	if err := c.Authenticate(saslClient); err != nil {
 		log.Fatalf("authentication failed: %v", err)
+	}
+}
+
+func ExampleClient_Closed() {
+	c, err := imapclient.DialTLS("mail.example.org:993", nil)
+	if err != nil {
+		log.Fatalf("failed to dial IMAP server: %v", err)
+	}
+
+	selected := false
+
+	go func(c *imapclient.Client) {
+		if err := c.Login("root", "asdf").Wait(); err != nil {
+			log.Fatalf("failed to login: %v", err)
+		}
+
+		if _, err := c.Select("INBOX", nil).Wait(); err != nil {
+			log.Fatalf("failed to select INBOX: %v", err)
+		}
+
+		selected = true
+
+		c.Close()
+	}(c)
+
+	// This channel shall be closed when the connection is closed.
+	<-c.Closed()
+	log.Println("Connection has been closed")
+
+	if !selected {
+		log.Fatalf("Connection was closed before selecting mailbox")
 	}
 }
