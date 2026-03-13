@@ -59,6 +59,8 @@ type SearchCriteria struct {
 	Or  [][2]SearchCriteria
 
 	ModSeq *SearchCriteriaModSeq // requires CONDSTORE
+
+	XGmRaw []string // requires X-GM-EXT-1
 }
 
 // And intersects two search criteria.

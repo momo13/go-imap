@@ -226,6 +226,10 @@ func writeSearchKey(enc *imapwire.Encoder, criteria *imap.SearchCriteria) {
 		}
 	}
 
+	for _, gmRaw := range criteria.XGmRaw {
+		encodeItem().Atom("X-GM-RAW").SP().String(gmRaw)
+	}
+
 	if criteria.Larger > 0 {
 		encodeItem().Atom("LARGER").SP().Number64(criteria.Larger)
 	}
