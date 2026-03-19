@@ -210,6 +210,13 @@ func (cmd *FetchCommand) Close() error {
 	return cmd.wait()
 }
 
+// WasThrottled indicates whether the command had been throttled.
+//
+// Has to be called after the Close call.
+func (cmd *FetchCommand) WasThrottled() bool {
+	return cmd.throttled
+}
+
 // Collect accumulates message data into a list.
 //
 // This method will read and store message contents in memory. This is

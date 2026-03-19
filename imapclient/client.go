@@ -783,6 +783,9 @@ func (c *Client) readResponseTagged(tag, typ string) (startTLS *startTLSCommand,
 	var cmdErr error
 	switch typ {
 	case "OK":
+		if strings.Contains(text, "THROTTLED") {
+			cmd.base().throttled = true
+		}
 		// nothing to do
 	case "NO", "BAD":
 		cmdErr = &imap.Error{
@@ -1232,9 +1235,10 @@ type command interface {
 }
 
 type commandBase struct {
-	tag  string
-	done chan error
-	err  error
+	tag       string
+	done      chan error
+	err       error
+	throttled bool
 }
 
 func (cmd *commandBase) base() *commandBase {
@@ -1256,6 +1260,10 @@ type Command struct {
 // Wait blocks until the command has completed.
 func (cmd *Command) Wait() error {
 	return cmd.wait()
+}
+
+func (cmd *Command) WasThrottled() bool {
+	return cmd.throttled
 }
 
 type loginCommand struct {
